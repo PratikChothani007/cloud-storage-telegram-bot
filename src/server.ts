@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { webhookCallback } from 'grammy';
-import { bot } from './bot.js';
+import { bot, setupBotCommands } from './bot.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -18,8 +18,10 @@ app.get('/', (_req, res) => {
 // Secret webhook path (hard to guess)
 const secretPath = `/webhook/${process.env.BOT_TOKEN}`;
 
-// Mount grammY webhook handler
-app.use(secretPath, webhookCallback(bot, 'express'));
+// Mount grammY webhook handler with increased timeout (60 seconds)
+app.use(secretPath, webhookCallback(bot, 'express', {
+    timeoutMilliseconds: 60000,
+}));
 
 // Graceful shutdown
 process.once('SIGINT', () => bot.stop());
@@ -31,6 +33,8 @@ app.listen(port, async () => {
     // Set Telegram webhook
     const webhookUrl = `${domain}${secretPath}`;
     await bot.api.setWebhook(webhookUrl);
-
     console.log(`✅ Webhook set: ${webhookUrl}`);
+
+    // Set up bot commands menu
+    await setupBotCommands();
 });
